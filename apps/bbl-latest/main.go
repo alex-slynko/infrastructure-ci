@@ -1,12 +1,12 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/cloudfoundry/infrastructure-ci/apps/bbl-latest/utils"
 )
 
 func main() {
@@ -14,12 +14,19 @@ func main() {
 	fmt.Printf("Starting server on port: %s...\n", port)
 
 	err := http.ListenAndServe(fmt.Sprintf("0.0.0.0:%s", port), http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		var (
+			latestBBLVersion string
+			lastModified     string
+		)
+
 		switch req.URL.Path {
 		case "/latest":
 			queryParams := req.URL.Query()
 			os := queryParams.Get("os")
 
-			latestBBLVersion, err := getLatestBBLVersion()
+			var err error
+			// NOT TESTED: saving and passing latestBBLVersion and lastModified
+			latestBBLVersion, lastModified, err = utils.LatestBBLVersion(latestBBLVersion, lastModified)
 			if err != nil {
 				// not tested
 				w.WriteHeader(http.StatusInternalServerError)
@@ -40,37 +47,10 @@ func main() {
 				w.Write([]byte("missing required query parameter: os=[osx,linux]"))
 			}
 		default:
-			w.WriteHeader(http.StatusOK)
+			w.WriteHeader(http.StatusNotFound)
 		}
 	}))
 	if err != nil {
 		log.Fatal(err)
 	}
-}
-
-func getLatestBBLVersion() (string, error) {
-	var latestJson struct {
-		TagName string `json:"tag_name"`
-	}
-
-	response, err := http.Get("https://api.github.com/repos/cloudfoundry/bosh-bootloader/releases/latest")
-	if err != nil {
-		// not tested
-		return "", err
-	}
-	defer response.Body.Close()
-
-	bodyContents, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		// not tested
-		return "", err
-	}
-
-	err = json.Unmarshal(bodyContents, &latestJson)
-	if err != nil {
-		// not tested
-		return "", err
-	}
-
-	return latestJson.TagName, nil
 }

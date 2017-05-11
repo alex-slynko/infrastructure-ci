@@ -74,6 +74,7 @@ func waitForServerToStart(port string) {
 	}
 }
 
+// Maybe use this to make a smoke test?
 func getLatestBBLVersion() string {
 	var latestJson struct {
 		TagName string `json:"tag_name"`
